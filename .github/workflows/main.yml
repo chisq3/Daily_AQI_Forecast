@@ -1,0 +1,76 @@
+name: 🌫️ Crawl AQI Data Hourly
+
+on:
+  schedule:
+    - cron: '30 * * * *'  # Chạy phút 30 mỗi giờ
+  workflow_dispatch:      # Cho phép chạy thủ công
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: ⬇️ Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better git operations
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'  # Cache pip dependencies
+
+    - name: 📦 Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: ⚙️ Run AQI crawl script
+      env:
+        AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
+      run: python crawl_aqi.py
+
+    - name: 📊 Check data changes
+      id: check_changes
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "📈 Data changes detected"
+        else
+          echo "changes=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ No data changes"
+        fi
+
+    - name: 📤 Commit and push changes
+      if: steps.check_changes.outputs.changes == 'true'
+      run: |
+        git config --local user.email "chiquang312@gmail.com"
+        git config --local user.name "ChiQuang"
+        
+        # Add files
+        git add aqi_data.csv
+        git add backups/*.csv 2>/dev/null || true
+        
+        # Commit with detailed message
+        TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S UTC')
+        RECORD_COUNT=$(tail -n +2 aqi_data.csv 2>/dev/null | wc -l || echo "0")
+        
+        git commit -m "🔄 Update AQI data - ${TIMESTAMP}
+
+        📊 Total records: ${RECORD_COUNT}
+        🤖 Auto-updated by GitHub Actions"
+        
+        git push
+
+    - name: 📋 Summary
+      run: |
+        echo "## 📈 AQI Crawl Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ✅ Completed" >> $GITHUB_STEP_SUMMARY
+        if [ -f aqi_data.csv ]; then
+          TOTAL_RECORDS=$(tail -n +2 aqi_data.csv 2>/dev/null | wc -l || echo "0")
+          echo "- **Total Records**: ${TOTAL_RECORDS}" >> $GITHUB_STEP_SUMMARY
+        fi
