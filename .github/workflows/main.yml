@@ -31,7 +31,7 @@ jobs:
     - name: ⚙️ Run AQI crawl script
       env:
         AQICN_TOKEN: ${{ secrets.AQICN_TOKEN }}
-      run: python crawl_aqi.py
+      run: python crawler.py
 
     - name: 📊 Check data changes
       id: check_changes
