@@ -2,7 +2,7 @@ name: 🌫️ Crawl AQI Data Hourly
 
 on:
   schedule:
-    - cron: '30 * * * *'  # Chạy phút 30 mỗi giờ
+    - cron: '20 * * * *'  # Chạy phút 20 mỗi giờ
   workflow_dispatch:      # Cho phép chạy thủ công
 
 jobs:
